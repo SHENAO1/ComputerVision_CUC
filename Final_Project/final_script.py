@@ -310,17 +310,31 @@ def triangulate(P1, P2, pts1, pts2):
         
         # --- 构建矩阵 A (4x4) ---
         # 对应公式: x x PX = 0  =>  u p3^T X - p1^T X = 0
+        # Row 1: u1 * pi1_3T - pi1_1T
+        # Row 2: v1 * pi1_3T - pi1_2T
+        # Row 3: u2 * pi2_3T - pi2_1T
+        # Row 4: v2 * pi2_3T - pi2_2T
         
+        A = np.zeros((4, 4))
+        
+        # P1 的行向量 (P1[0], P1[1], P1[2] 分别对应公式中的 pi1^1T, pi1^2T, pi1^3T)
+        A[0] = u1 * P1[2] - P1[0]
+        A[1] = v1 * P1[2] - P1[1]
+        
+        # P2 的行向量
+        A[2] = u2 * P2[2] - P2[0]
+        A[3] = v2 * P2[2] - P2[1]
         
         # --- SVD 求解 AX = 0 ---
-        
+        U, S, Vt = np.linalg.svd(A)
+        X = Vt[-1] # X is [X, Y, Z, w]
         
         # --- 齐次坐标归一化 ---
         # 避免除以 0
         if abs(X[3]) > 1e-6:
             points_3d.append(X[:3] / X[3])
         else:
-            # 点在无穷远，或者数值不稳定
+            # 如果 w 接近 0，说明点在无穷远或者数值不稳定
             points_3d.append(X[:3]) 
             
     return np.array(points_3d)
@@ -436,10 +450,14 @@ if __name__ == '__main__':
 
     # 必须先构建 3x4 的投影矩阵 P = K[R|t]
     # 相机 1：位于原点，无旋转
-    
+    # 构造 [I | 0]
+    I = np.eye(3)
+    zeros = np.zeros((3, 1))
+    P1 = K @ np.hstack((I, zeros))
     
     # 相机 2：通过 estimate_pose 恢复的 R 和 t
-    
+    # 构造 [R | t]
+    P2 = K @ np.hstack((R, t))
     
     # 传入正确的 P1, P2
     points_3d = triangulate(P1, P2, pts1_inliers, pts2_inliers)
