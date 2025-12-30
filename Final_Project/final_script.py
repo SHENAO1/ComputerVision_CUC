@@ -8,6 +8,17 @@ import matplotlib.pyplot as plt
 def load_data(img1_path, img2_path, k_path):
     """读取图片和内参矩阵"""
     
+    # 使用 cv2.imread 读取图像
+    img1 = cv2.imread(img1_path)
+    img2 = cv2.imread(img2_path)
+    
+    # 检查图片是否读取成功
+    if img1 is None or img2 is None:
+        raise FileNotFoundError(f"无法读取图片，请检查路径: {img1_path} 或 {img2_path}")
+
+    # 使用 np.loadtxt 读取内参矩阵
+    K = np.loadtxt(k_path)
+    
 
     return img1, img2, K
 
@@ -302,6 +313,22 @@ if __name__ == '__main__':
     
     # 1. 加载数据
     img1, img2, K = load_data(img1_path, img2_path, k_path)
+    
+    # =========================================================
+    # 将图像左右连接并使用 cv2.imshow 并列显示
+    # =========================================================
+    # 使用 np.hstack 将两个图像数组在水平方向上堆叠 (Left-Right Concatenation)
+    # 前提是两张图片的高度必须一致
+    if img1.shape[0] == img2.shape[0]:
+        combined_img = np.hstack((img1, img2))
+        
+        cv2.imshow('Loaded Images (Press any key to continue)', combined_img)
+        print("图片已显示，按任意键继续执行后续步骤...")
+        cv2.waitKey(0)        # 等待按键
+        cv2.destroyAllWindows() # 关闭窗口
+    else:
+        print("[Warning] 图片高度不一致，跳过拼接显示。")
+    # =========================================================
 
     # 2. 特征提取与匹配
     print("Step 1: Feature Matching...")
