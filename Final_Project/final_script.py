@@ -126,27 +126,52 @@ def normalize_points(pts):
 def solve_F_8point(pts1, pts2):
     """
     使用 8 点算法计算基础矩阵 F
-    输入: pts1, pts2 (Nx2) - 必须是归一化后的点或者 RANSAC 采样点
+    输入: pts1, pts2 (Nx2)
     输出: F (3x3)
+    参考拆分的8点算法 PDF 中的第五页和第六页
     """
     # --- Step 1: 归一化 (Normalization) ---
+    pts1_norm, T1 = normalize_points(pts1)
+    pts2_norm, T2 = normalize_points(pts2)
     
+    N = pts1_norm.shape[0]
     
     # --- Step 2: 构建系数矩阵 A (Nx9) ---
-    # 方程: x'F x = 0  =>  [u'u, u'v, u', v'u, v'v, v', u, v, 1] * f = 0
+    # 方程: p_r^T F p_l = 0  =>  [u'u, u'v, u', v'u, v'v, v', u, v, 1] * f = 0
+    # 参考 PDF Page 5: (xr*xl, xr*yl, xr, yr*xl, yr*yl, yr, xl, yl, 1) 
+    # 这里 u, v 对应左图 (xl, yl); u', v' 对应右图 (xr, yr)
+    u = pts1_norm[:, 0]
+    v = pts1_norm[:, 1]
+    u_p = pts2_norm[:, 0]
+    v_p = pts2_norm[:, 1]
     
+    A = np.column_stack((
+        u_p * u, u_p * v, u_p,
+        v_p * u, v_p * v, v_p,
+        u,       v,       np.ones(N)
+    ))
     
     # --- Step 3: SVD 求解 Af=0 ---
-    
+    # 对 A 进行 SVD，最小奇异值对应的右奇异向量即为解
+    U, S, Vt = np.linalg.svd(A)
+    F_vec = Vt[-1] # 取最后一行
+    F_norm = F_vec.reshape(3, 3)
     
     # --- Step 4: 强制秩约束 (Enforce Rank-2) ---
-    
+    # 基础矩阵的秩必须为 2
+    Uf, Sf, Vft = np.linalg.svd(F_norm)
+    Sf[2] = 0 # 将最小的奇异值置为 0
+    F_norm = Uf @ np.diag(Sf) @ Vft
     
     # --- Step 5: 去归一化 (Denormalization) ---
+    # F = T2^T * F_norm * T1
+    F = T2.T @ F_norm @ T1
     
+    # 归一化 F 使得最后一个元素为 1 (可选，但通常有助于数值稳定性)
+    if abs(F[2, 2]) > 1e-8:
+        F = F / F[2, 2]
         
     return F
-
 # =========================================================
 # 3.3: 误差计算 (用于 RANSAC)
 # =========================================================
