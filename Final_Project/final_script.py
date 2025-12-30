@@ -87,26 +87,36 @@ def normalize_points(pts):
     N = pts.shape[0]
     
     # 1. 计算质心 (cx, cy)
-    
+    mean = np.mean(pts, axis=0)
+    cx, cy = mean[0], mean[1]
     
     # 2. 平移
-    
+    shifted_pts = pts - mean
     
     # 3. 计算平均距离 (Mean Distance from origin)
     # dist = sqrt(x^2 + y^2)
-    
+    dist = np.sqrt(np.sum(shifted_pts**2, axis=1))
+    mean_dist = np.mean(dist)
     
     # 4. 计算缩放因子 s (使得平均距离为 sqrt(2))
-    
+    # 避免除以0
+    if mean_dist < 1e-8:
+        s = 1.0
+    else:
+        s = np.sqrt(2) / mean_dist
 
     # 5. 缩放
-    
+    norm_pts = shifted_pts * s
     
     # 6. 构造变换矩阵 T
     # T = [s  0  -s*cx]
     #     [0  s  -s*cy]
     #     [0  0     1 ]
-    
+    T = np.array([
+        [s, 0, -s*cx],
+        [0, s, -s*cy],
+        [0, 0, 1.0]
+    ])
     
     return norm_pts, T
 
@@ -358,10 +368,22 @@ if __name__ == '__main__':
         print("[Warning] 图片高度不一致，跳过拼接显示。")
     # =========================================================
 
+
+
     # 2. 特征提取与匹配
     print("Step 1: Feature Matching...")
     pts1, pts2, matches, kp1, kp2 = extract_and_match_features(img1, img2)
     
+    # =========================================================
+    # 任务要求 2: 使用 cv2.drawMatches 显示匹配结果
+    # 注意：PPT Page 127 使用的是 drawMatchesKnn ，但这里要求改用 drawMatches
+    # =========================================================
+    img_matches = cv2.drawMatches(img1, kp1, img2, kp2, matches, None, 
+                                  flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+    
+    cv2.imshow('Feature Matches', img_matches)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
     # 显示匹配结果
     
 
