@@ -28,20 +28,48 @@ def load_data(img1_path, img2_path, k_path):
 def extract_and_match_features(img1, img2):
     """
     使用 SIFT 提取特征，使用 KNN 进行匹配，并进行 Lowe's Ratio Test。
+    (参考从 11 立体视觉（下）单独拆分的图像矫正 PDF)
     """
     # 1. 初始化 SIFT 检测器
+    # 注意：图像矫正 PDF Page 24 使用了默认参数 sift = cv2.SIFT_create() 
+    # 但脚本模板中已经给定了特定的参数 (contrastThreshold等)，保留模板的参数
     sift = cv2.SIFT_create(nfeatures=0, nOctaveLayers=5, contrastThreshold=0.001, edgeThreshold=10, sigma=1.4)
 
     # 2. 检测关键点和计算描述子
-    
+    # 参考 图像矫正 PDF Page 23-25 的 “# Find the keypoints and descriptors with SIFT” 部分代码
+    kp1, des1 = sift.detectAndCompute(img1, None)
+    kp2, des2 = sift.detectAndCompute(img2, None)
 
-    # 3. 特征匹配 (使用 FLANN 或 BruteForce)
-    # FLANN 参数设计 (对于 SIFT 这种浮点描述子)
+    # 3. 特征匹配 (使用 FLANN)
+    # 参考 图像矫正 PDF Page 29 的 “# Match keypoints in both images” 部分代码
+    FLANN_INDEX_KDTREE = 1
+    index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5) #  Page 29 中的 trees=5
+    search_params = {} # 图像矫正 PDF Page 29 传入了空字典 {}
+
+    flann = cv2.FlannBasedMatcher(index_params, search_params)
     
+    matches_all = flann.knnMatch(des1, des2, k=2)
 
     # 4. Lowe's Ratio Test (比率测试)
-    # 只有当最近邻距离 < 0.7 * 次近邻距离时，才认为是好匹配
+    # 参考 图像矫正 PDF Page 30 “# Keep good matches: calculate distinctive image features” 部分代码
+    good = []
+    pts1 = []
+    pts2 = []
     
+    for m, n in matches_all:
+        if m.distance < 0.7 * n.distance: # 0.7 是 PPT 中的阈值 
+            # --- 修改点 ---
+            # PDF Page 32 写的是 good.append([m]) 用于 drawMatchesKnn 
+            # 但任务要求使用 drawMatches，所以这里必须 append(m)，去掉中括号。
+            good.append(m) 
+            
+            # 提取坐标用于后续计算 (参考 PDF Page 32) 
+            pts1.append(kp1[m.queryIdx].pt)
+            pts2.append(kp2[m.trainIdx].pt)
+            
+    # 将点转换为 numpy 数组，参考 PDF Page 35，后续计算基础矩阵需要 float32
+    pts1 = np.float32(pts1)
+    pts2 = np.float32(pts2)
     
     print(f"[Info] Found {len(good)} good matches.")
     return pts1, pts2, good, kp1, kp2
