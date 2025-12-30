@@ -128,7 +128,7 @@ def solve_F_8point(pts1, pts2):
     使用 8 点算法计算基础矩阵 F
     输入: pts1, pts2 (Nx2)
     输出: F (3x3)
-    参考拆分的8点算法 PDF 中的第五页和第六页
+    参考拆分的“8点算法” PDF 中的第五页和第六页
     """
     # --- Step 1: 归一化 (Normalization) ---
     pts1_norm, T1 = normalize_points(pts1)
