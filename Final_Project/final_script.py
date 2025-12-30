@@ -344,54 +344,78 @@ def triangulate(P1, P2, pts1, pts2):
 # =========================================================
 def visualize_point_cloud(points_3d):
     """
-    使用 Matplotlib 绘制 3D 散点图，并强制保持坐标轴等比例。
+    使用 Matplotlib 绘制 3D 散点图，设置视点并保持坐标轴等比例。
     """
-    # 1. 简单的过滤：剔除距离过远的点 (可能是噪声)
-    # 根据数据集尺度调整阈值，这里假设物体在相机前方 0~50 单位内
-    # 如果你的点云显示为空，请检查这里的阈值是否太严格
-    # mask = (points_3d[:, 2] > 0) & (points_3d[:, 2] < 50)
-    # points_3d = points_3d[mask]
+    # ==========================================
+    # 1. 数据清洗与过滤
+    # ==========================================
+    # 三角测量经常会产生无穷远的点或位于相机背后的点(Z<0)
+    # 我们需要过滤掉这些异常值，以便可视化更清晰
+    
+    # 过滤 Z > 0 (相机前方) 且 Z < 50 (根据实际场景尺度调整，去除极远噪点)
+    # 如果你的场景很大，请适当调大 50 这个阈值
+    valid_mask = (points_3d[:, 2] > 0) & (points_3d[:, 2] < 50)
+    filtered_points = points_3d[valid_mask]
 
-    if len(points_3d) == 0:
-        print("[Warning] No points to visualize after filtering!")
+    if len(filtered_points) == 0:
+        print("[Warning] No points to visualize after filtering! Check your filter threshold.")
         return
 
+    print(f"[Info] Visualizing {len(filtered_points)} points (filtered from {len(points_3d)})")
+
+    # ==========================================
+    # 2. 创建 3D 绘图
+    # ==========================================
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection='3d')
     
-    # 2. 绘制点云
-    # c=points_3d[:, 2] 将深度映射为颜色，增加立体感
-    ax.scatter(points_3d[:, 0], points_3d[:, 1], points_3d[:, 2], 
-               c=points_3d[:, 2], cmap='viridis', s=50, alpha=0.5, marker='.')
+    # 提取坐标
+    X = filtered_points[:, 0]
+    Y = filtered_points[:, 1]
+    Z = filtered_points[:, 2]
 
-    ax.set_xlabel('X Axis')
-    ax.set_ylabel('Z Axis (Depth)')
-    ax.set_zlabel('Y Axis')
-    ax.set_title('Sparse 3D Reconstruction')
+    # 绘制散点图
+    # c=Z: 根据深度着色，cmap='viridis': 使用蓝绿黄配色，增加立体感
+    sc = ax.scatter(X, Y, Z, c=Z, cmap='viridis', s=20, alpha=0.6, marker='.')
     
-    # 3. 设置视点
-    # elev=-80, azim=-90 通常适合俯视观察 SfM 重建结果
+    # 添加颜色条表示深度
+    plt.colorbar(sc, label='Depth (Z)')
+
+    # 设置标签
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_title('3D Reconstruction')
+
+    # ==========================================
+    # 3. 设置视点 (Viewpoint)
+    # ==========================================
+    # OpenCV 坐标系中 Y 轴是向下的，而 Matplotlib 默认 Z 轴向上。
+    # 为了符合直觉（看起来不倒置），通常需要调整视角。
+    # elev (elevation): 仰角, azim (azimuth): 方位角
+    # -80/-90 的组合通常适合查看俯视/正视的 OpenCV 坐标系结果
     ax.view_init(elev=-80, azim=-90)
+    
+    # 也可以尝试反转 Y 轴来匹配图像坐标系习惯
+    ax.invert_yaxis()
 
-    # 4. 强制坐标轴比例一致  
-    # 获取当前自动生成的坐标轴范围
-    x_limits = ax.get_xlim3d()
-    y_limits = ax.get_ylim3d()
-    z_limits = ax.get_zlim3d()
+    # ==========================================
+    # 4. 强制坐标轴等比例 (Equal Aspect Ratio)
+    # ==========================================
+    # Matplotlib 3D 默认会自动拉伸坐标轴填满画布，导致物体变形。
+    # 下面的代码手动计算包围盒，强制 X, Y, Z 轴比例为 1:1:1
     
-    limits = np.array([x_limits, y_limits, z_limits])
+    max_range = np.array([X.max()-X.min(), Y.max()-Y.min(), Z.max()-Z.min()]).max() / 2.0
     
-    # 计算包围盒的中心和最大半径
-    origin = np.mean(limits, axis=1)
-    radius = 0.5 * np.max(np.abs(limits[:, 1] - limits[:, 0]))
+    mid_x = (X.max()+X.min()) * 0.5
+    mid_y = (Y.max()+Y.min()) * 0.5
+    mid_z = (Z.max()+Z.min()) * 0.5
     
-    # 强制设置所有轴的范围一致，以中心点向外扩展
-    ax.set_xlim3d([origin[0] - radius, origin[0] + radius])
-    ax.set_ylim3d([origin[1] - radius, origin[1] + radius])
-    ax.set_zlim3d([origin[2] - radius, origin[2] + radius])
+    ax.set_xlim(mid_x - max_range, mid_x + max_range)
+    ax.set_ylim(mid_y - max_range, mid_y + max_range)
+    ax.set_zlim(mid_z - max_range, mid_z + max_range)
 
     plt.show()
-
 # =============================================================
 # 主程序流程
 # =============================================================
