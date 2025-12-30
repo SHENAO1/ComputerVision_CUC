@@ -1,0 +1,21 @@
+# 忽略 Python 编译产生的垃圾文件
+__pycache__/
+*.py[cod]
+
+# 忽略系统自动生成的文件 (Mac/Windows)
+.DS_Store
+Thumbs.db
+
+# 忽略打包的作业提交压缩包 (Git就是你的备份，不需要存zip)
+*.zip
+*.rar
+*.tar.gz
+
+# 关于图片策略 (根据你的需求二选一)
+# 策略A (推荐)：如果 output 图片都是代码生成的，最好忽略它们，只保留原始素材(如 baboon.png)
+# 这通常比较难区分，除非你把生成的图片都放在特定文件夹(如 output/)
+# 如果无法区分，可以暂时不忽略 png，或者手动添加不需要的图片
+
+# 忽略 IDE 配置文件 (如果你用 VS Code 或 PyCharm)
+.vscode/
+.idea/
