@@ -224,12 +224,19 @@ def ransac_fundamental_matrix(pts1, pts2, threshold=1.0, max_iters=1000):
     best_F = None
     best_mask = np.zeros(N, dtype=bool)
 
+    # 如果点数少于8个，无法计算
+    if N < 8:
+        return None, best_mask
+    
     for i in range(max_iters):
         # 1. 随机采样 8 个点
+        indices = np.random.choice(N, 8, replace=False)
+        p1_sample = pts1[indices]
+        p2_sample = pts2[indices]
         
         
         # 2. 使用 8 点法估计模型
-        
+        F = solve_F_8point(p1_sample, p2_sample)
         
         if F is None:  # 无法计算出有效的 F
             continue
@@ -242,11 +249,17 @@ def ransac_fundamental_matrix(pts1, pts2, threshold=1.0, max_iters=1000):
         inliers_count = np.sum(mask)
         
         # 5. 更新最佳模型
-        
+        if inliers_count > best_inliers_count:
+            best_inliers_count = inliers_count
+            best_F = F
+            best_mask = mask
 
     # 6. 最终优化
     # 使用所有内点重新计算 F，以获得更稳定的结果
-    
+    if best_inliers_count >= 8:
+        pts1_inliers = pts1[best_mask]
+        pts2_inliers = pts2[best_mask]
+        best_F = solve_F_8point(pts1_inliers, pts2_inliers)
             
     print(f"RANSAC Finished. Inliers: {best_inliers_count}/{N}, Iters: {max_iters}")
     
