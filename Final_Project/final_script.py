@@ -415,6 +415,12 @@ def visualize_point_cloud(points_3d):
     ax.set_ylim(mid_y - max_range, mid_y + max_range)
     ax.set_zlim(mid_z - max_range, mid_z + max_range)
 
+    # ==========================================
+    # 保存 3D 结果图片
+    # ==========================================
+    plt.savefig('step3_3d_reconstruction.png')
+    print("[Info] Saved 3D reconstruction result to step3_3d_reconstruction.png")
+
     plt.show()
 # =============================================================
 # 主程序流程
@@ -436,6 +442,12 @@ if __name__ == '__main__':
     if img1.shape[0] == img2.shape[0]:
         combined_img = np.hstack((img1, img2))
         
+        # ==========================================
+        # 保存拼接输入图片
+        # ==========================================
+        cv2.imwrite('step1_combined_view.png', combined_img)
+        print("[Info] Saved combined input image to step1_combined_view.png")
+
         cv2.imshow('Loaded Images (Press any key to continue)', combined_img)
         print("图片已显示，按任意键继续执行后续步骤...")
         cv2.waitKey(0)        # 等待按键
@@ -457,6 +469,12 @@ if __name__ == '__main__':
     img_matches = cv2.drawMatches(img1, kp1, img2, kp2, matches, None, 
                                   flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
     
+    # ==========================================
+    # 保存特征匹配图片
+    # ==========================================
+    cv2.imwrite('step2_feature_matches.png', img_matches)
+    print("[Info] Saved feature matches image to step2_feature_matches.png")
+
     cv2.imshow('Feature Matches', img_matches)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
